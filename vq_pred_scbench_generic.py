@@ -458,22 +458,22 @@ def evaluate_single_task(args, task_name: str):
     try:
         # Map task names to local file paths
         local_dataset_files = {
-            "scbench_summary": "/home/pai/data/PQCache/data/scbench/scbench_summary.jsonl",
-            "scbench_summary_with_needles": "/home/pai/data/PQCache/data/scbench/scbench_summary_with_needles.jsonl",
-            "scbench_qa_eng": "/home/pai/data/PQCache/data/scbench/scbench_qa_eng.jsonl",
-            "scbench_qa_chn": "/home/pai/data/PQCache/data/scbench/scbench_qa_chn.jsonl",
-            "scbench_choice_eng": "/home/pai/data/PQCache/data/scbench/scbench_choice_eng.jsonl",
-            "scbench_mf": "/home/pai/data/PQCache/data/scbench/scbench_mf.jsonl",
-            "scbench_many_shot": "/home/pai/data/PQCache/data/scbench/scbench_many_shot.jsonl",
-            "scbench_kv": "/home/pai/data/PQCache/data/scbench/scbench_kv.jsonl",
-            "scbench_prefix_suffix": "/home/pai/data/PQCache/data/scbench/scbench_prefix_suffix.jsonl",
-            "scbench_vt": "/home/pai/data/PQCache/data/scbench/scbench_vt.jsonl",
+            "scbench_summary": "./data/scbench/scbench_summary.jsonl",
+            "scbench_summary_with_needles": "./data/scbench/scbench_summary_with_needles.jsonl",
+            "scbench_qa_eng": "./data/scbench/scbench_qa_eng.jsonl",
+            "scbench_qa_chn": "./data/scbench/scbench_qa_chn.jsonl",
+            "scbench_choice_eng": "./data/scbench/scbench_choice_eng.jsonl",
+            "scbench_mf": "./data/scbench/scbench_mf.jsonl",
+            "scbench_many_shot": "./data/scbench/scbench_many_shot.jsonl",
+            "scbench_kv": "./data/scbench/scbench_kv.jsonl",
+            "scbench_prefix_suffix": "./data/scbench/scbench_prefix_suffix.jsonl",
+            "scbench_vt": "./data/scbench/scbench_vt.jsonl",
         }
         
         # Special handling for JSON files
         json_files = {
-            "scbench_repoqa": "/home/pai/data/PQCache/data/scbench/scbench_repoqa.json",
-            "scbench_repoqa_and_kv": "/home/pai/data/PQCache/data/scbench/scbench_repoqa_and_kv.json",
+            "scbench_repoqa": "./data/scbench/scbench_repoqa.json",
+            "scbench_repoqa_and_kv": "./data/scbench/scbench_repoqa_and_kv.json",
         }
         
         dataset_path = None
