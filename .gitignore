@@ -1,0 +1,82 @@
+# 日志文件
+*.log
+
+# 结果文件夹
+results*/
+pred*/
+
+# 数据文件夹
+data/
+
+# Python缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 虚拟环境
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+
+# 模型文件和缓存
+*.bin
+*.safetensors
+model_cache/
+transformers_cache/
+
+# 实验结果
+outputs/
+checkpoints/
+
+# 编译产物
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# 包管理
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# Flash attention wheel文件
+*.whl
+*.tar.gz
+
+# 临时文件和工具生成的文件
+=*
+flash_attn*
+tmp*/
+
+# 其他不需要版本控制的文件
+*.orig
+*.rej
