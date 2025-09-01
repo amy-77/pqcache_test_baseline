@@ -68,7 +68,7 @@ SCBench (SharedContextBench) provides comprehensive evaluation of long-context m
 
 **Core Python Script**: `vq_pred_scbench_generic.py`
 
-### 🎯 字符串检索任务 (关键KV随轮次强烈变化)
+### 字符串检索任务 (关键KV随轮次强烈变化)
 
 | 数据集 | 任务简称 | 描述 | 运行脚本 |
 |--------|----------|------|----------|
@@ -76,7 +76,7 @@ SCBench (SharedContextBench) provides comprehensive evaluation of long-context m
 | `scbench_prefix_suffix.jsonl` | **Retr.Prefix-Suffix** | 前缀后缀检索 | `run_scbench_prefix_suffix.sh` |
 | `scbench_vt.jsonl` | **Retr.MultiHop** | 多跳变量跟踪 | `run_scbench_vt.sh` |
 
-### 🎯 语义检索任务 (长生成注意力迁移)
+### 语义检索任务 (长生成注意力迁移)
 
 | 数据集 | 任务简称 | 描述 | 运行脚本 |
 |--------|----------|------|----------|
@@ -85,7 +85,7 @@ SCBench (SharedContextBench) provides comprehensive evaluation of long-context m
 | `scbench_qa_chn.jsonl` | **Language QA** | 中文问答 | `run_scbench_qa_chn.sh` |
 | `scbench_choice_eng.jsonl` | **Multi-choice QA** | 英文选择题 | `run_scbench_choice_eng.sh` |
 
-### 🎯 全局信息处理任务 (海量输入→极短输出)
+### 全局信息处理任务 (海量输入→极短输出)
 
 | 数据集 | 任务简称 | 描述 | 运行脚本 |
 |--------|----------|------|----------|
@@ -93,7 +93,7 @@ SCBench (SharedContextBench) provides comprehensive evaluation of long-context m
 | `scbench_many_shot.jsonl` | **ICL.ManyShot** | hundreds-shot ICL | `run_scbench_many_shot.sh` |
 | `scbench_summary.jsonl` | **En.Sum** | 英文摘要 | `run_scbench_summary.sh` |
 
-### 🎯 多任务组合 (多步骤推理)
+### 多任务组合 (多步骤推理)
 
 | 数据集 | 任务简称 | 描述 | 运行脚本 |
 |--------|----------|------|----------|
