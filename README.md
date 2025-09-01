@@ -26,7 +26,9 @@ We're using Conda to manage the Python environment. Please try building the Cond
 ## Models
 Currently supported models include [meta-llama/Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) and [mistralai/Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2).
 
-## Scripts
+## Quick Start
+
+### Environment Setup
 
 1. First compile lfucache for GPU cache:
 ```bash
@@ -35,9 +37,11 @@ mkdir build; cd build; cmake ..; make
 cd ../../../../
 ```
 
-2. Then download the datasets of [LongBench](https://github.com/THUDM/LongBench) to `./data/`.
+2. Download datasets:
+   - For LongBench: Download to `./data/`
+   - For SCBench: Run `python download_scbench.py`
 
-3. [Optional] If you want to use local model checkpoints, please modify the paths listed in `config/model2path.json`.
+3. [Optional] If you want to use local model checkpoints, modify `config/model2path.json`:
 ```json
 {
     "mistral-7b-Instruct-32k": "[MISTRAL_MODEL_PATH]",
@@ -45,27 +49,76 @@ cd ../../../../
 }
 ```
 
-4. Run the script:
+### LongBench Evaluation
 
+```bash
 export HF_ENDPOINT=https://hf-mirror.com
-
-```bash
 bash run_mistral.sh
-bash run_llama_fixed.sh
-
+bash run_llama.sh
 ```
 
-
-
-
-5. Run the evaluation script after completing the generation of all samples:
+Evaluation:
 ```bash
-python eval.py --model mistral-7b-Instruct-32k --dataset narrativeqa --exp_name default
-# python eval.py --model mistral-7b-Instruct-32k --dataset [DATASET_NAMES] --exp_name [EXP_NAME]
-```
 python eval.py --model llama-3.1 --dataset hotpotqa --exp_name pq_4321_rerun_v0
+```
 
-The evaluation results locate in `pred/mistral-7b-Instruct-32k/narrativeqa/default`.
+## SCBench Evaluation Tasks
+
+SCBench (SharedContextBench) provides comprehensive evaluation of long-context methods across different KV cache lifecycle scenarios.
+
+**Core Python Script**: `vq_pred_scbench_generic.py`
+
+### 🎯 字符串检索任务 (关键KV随轮次强烈变化)
+
+| 数据集 | 任务简称 | 描述 | 运行脚本 |
+|--------|----------|------|----------|
+| `scbench_kv.jsonl` | **Retr.KV** | 键值对检索 | `run_scbench_kv.sh` |
+| `scbench_prefix_suffix.jsonl` | **Retr.Prefix-Suffix** | 前缀后缀检索 | `run_scbench_prefix_suffix.sh` |
+| `scbench_vt.jsonl` | **Retr.MultiHop** | 多跳变量跟踪 | `run_scbench_vt.sh` |
+
+### 🎯 语义检索任务 (长生成注意力迁移)
+
+| 数据集 | 任务简称 | 描述 | 运行脚本 |
+|--------|----------|------|----------|
+| `scbench_repoqa.jsonl` | **Code.RepoQA** | 代码库检索与复现 | `run_scbench_repoqa_incremental.sh` |
+| `scbench_qa_eng.jsonl` | **Language QA** | 英文问答 | `run_scbench_qa_eng.sh` |
+| `scbench_qa_chn.jsonl` | **Language QA** | 中文问答 | `run_scbench_qa_chn.sh` |
+| `scbench_choice_eng.jsonl` | **Multi-choice QA** | 英文选择题 | `run_scbench_choice_eng.sh` |
+
+### 🎯 全局信息处理任务 (海量输入→极短输出)
+
+| 数据集 | 任务简称 | 描述 | 运行脚本 |
+|--------|----------|------|----------|
+| `scbench_mf.jsonl` | **Math.Find** | 长数组统计 | `run_scbench_mf.sh` |
+| `scbench_many_shot.jsonl` | **ICL.ManyShot** | hundreds-shot ICL | `run_scbench_many_shot.sh` |
+| `scbench_summary.jsonl` | **En.Sum** | 英文摘要 | `run_scbench_summary.sh` |
+
+### 🎯 多任务组合 (多步骤推理)
+
+| 数据集 | 任务简称 | 描述 | 运行脚本 |
+|--------|----------|------|----------|
+| `scbench_summary_with_needles.jsonl` | **Mix.Sum+NIAH** | 摘要+针海查找 | `run_scbench_summary_with_needles.sh` |
+| `scbench_repoqa_and_kv.jsonl` | **Mix.RepoQA+KV** | 代码检索+键值查找 | `run_scbench_repoqa_and_kv_incremental.sh` |
+
+### 使用示例
+
+```bash
+# 运行单个任务
+bash run_scbench_kv.sh
+
+# 运行所有任务
+bash run_all_scbench_tasks.sh
+
+# 数学推理任务
+bash run_math_500.sh    # Math-500数据集
+bash run_math_aime.sh   # AIME 2024数据集
+```
+
+### 结果保存
+
+- **增量保存**: 每完成一个样本自动保存，防止长时间运行中断丢失结果
+- **最终结果**: 保存在对应的 `pred/` 目录下
+- **日志文件**: 运行过程中的详细日志保存为 `.log` 文件
 
 ## Code Structure
 
