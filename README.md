@@ -202,5 +202,4 @@ During the development and implementation of PQCache, we learned a lot and borro
 [SPARQ](https://github.com/graphcore-research/llm-inference-research/tree/2024-01-paper)  
 [Hetu](https://github.com/PKU-DAIR/Hetu)
 
-## Citation
-If you find this work useful, please cite [our paper](https://arxiv.org/abs/2407.12820).
+
