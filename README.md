@@ -40,6 +40,8 @@ cd ../../../../
 2. Download datasets:
    - For LongBench: Download to `./data/`
    - For SCBench: Run `python download_scbench.py`
+   - For SCBench KV tasks: Run `python download_scbench_kv_vt.py`
+   - For Mathematics datasets: Download MATH-500 and AIME 2024 to `./data/cot_math/`
 
 3. [Optional] If you want to use local model checkpoints, modify `config/model2path.json`:
 ```json
@@ -108,17 +110,74 @@ bash run_scbench_kv.sh
 
 # 运行所有任务
 bash run_all_scbench_tasks.sh
-
-# 数学推理任务
-bash run_math_500.sh    # Math-500数据集
-bash run_math_aime.sh   # AIME 2024数据集
 ```
+
+## 数学推理评估 (Mathematics CoT Reasoning)
+
+我们新增了数学推理任务评估，支持对比PQCache和Full-Attention在数学问题上的性能。
+
+### 数据集
+
+| 数据集 | 难度级别 | 样本数 | 描述 |
+|--------|----------|--------|------|
+| **MATH-500** | 高中标准 | 500 | 高中数学竞赛题目 |
+| **AIME 2024** | 顶级竞赛 | 30 | 美国数学竞赛最高难度 |
+
+### 快速开始
+
+```bash
+# PQCache方法评估
+bash run_math_500.sh              # MATH-500数据集 (PQCache)
+bash run_math500_pqcache.sh       # MATH-500数据集 (PQCache，指定方法)
+
+# Full-Attention对比评估  
+bash run_math_fullattention.sh    # AIME 2024数据集 (Full-Attention)
+bash run_math500_fullattention.sh # MATH-500数据集 (Full-Attention)
+```
+
+### 评估和分析
+
+```bash
+# 详细结果分析 (支持R-KV风格评估)
+python eval_aime_2024_results.py --results_file [结果文件路径] --detailed_analysis
+
+# 示例：分析AIME 2024结果
+python eval_aime_2024_results.py \
+    --results_file math_cot_results/llama-3.1/aime_2024/pqcache_cot/cot_results_compress_0.1_ratio_0.5_0.5.jsonl \
+    --detailed_analysis
+```
+
+### 方法对比
+
+| 方法 | AIME 2024准确率 | MATH-500准确率 | 平均生成时间 | 备注 |
+|------|-----------------|----------------|--------------|------|
+| **PQCache** | 3.33% (1/30) | TBD | ~441s | KV压缩，节省内存 |
+| **Full-Attention** | TBD | TBD | ~34s | 无压缩，高精度 |
+
+> **发现**: AIME数据集难度极高，即使Full-Attention方法准确率也很低，建议使用MATH-500进行主要对比实验
 
 ### 结果保存
 
 - **增量保存**: 每完成一个样本自动保存，防止长时间运行中断丢失结果
 - **最终结果**: 保存在对应的 `pred/` 目录下
 - **日志文件**: 运行过程中的详细日志保存为 `.log` 文件
+
+## 工具脚本 (Utility Scripts)
+
+### 数据下载工具
+- `download_scbench.py`: 下载标准SCBench数据集
+- `download_scbench_kv_vt.py`: 下载SCBench KV检索和变量跟踪任务数据
+
+### 评估工具
+- `eval_aime_2024_results.py`: AIME 2024结果评估脚本，支持R-KV风格的详细分析
+  - 答案提取和正确性判断
+  - 生成时间和输出长度统计  
+  - 错误样本详细分析
+
+### 数学推理脚本
+- `run_math_cot.py`: PQCache数学推理主脚本
+- `run_math_cot_fullattention.py`: Full-Attention数学推理脚本
+- `run_math_*.sh`: 各种数学推理任务的Shell脚本
 
 ## Code Structure
 
