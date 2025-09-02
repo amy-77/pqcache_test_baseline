@@ -81,4 +81,4 @@ echo "结果保存在: ${OUTPUT_DIR}/llama-3.1/${TASK}/pqcache_official/"
 echo "=========================================="
 
 #  nohup ./run_scbench_prefix_suffix.sh > scbench_run_prefix_suffix.log 2>&1 &
-# 3865455  cuda 2
+# 3156943  cuda 2

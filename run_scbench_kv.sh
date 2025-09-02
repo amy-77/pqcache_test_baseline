@@ -32,7 +32,7 @@ RECENT_RATIO=0.5
 SINK_SIZE=16
 N_SUBVEC_PER_HEAD=2
 N_SUBBITS=6
-DEVICE_ID=4
+DEVICE_ID=3
 PP_SIZE=1
 
 # 设置环境变量
@@ -81,5 +81,4 @@ echo "结果保存在: ${OUTPUT_DIR}/llama-3.1/${TASK}/pqcache_official/"
 echo "=========================================="
 
 #  nohup ./run_scbench_kv.sh > scbench_run_kv.log 2>&1 &
-
-# 817846 cuda 4
+# [2] 3384977  cuda 3

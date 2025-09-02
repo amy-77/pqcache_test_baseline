@@ -103,6 +103,7 @@ def LlamaAttentionPatch(attn: LlamaAttention, config, idx):
         
         if self.compressor == "original":
             # 使用标准Flash Attention，无压缩
+            print("使用原始Flash Attention，无压缩")
             # print(f"first_time: {first_time}, past_key_value is None: {past_key_value is None}")
             if past_key_value is not None:
                     # 只打印第一层的repeat_kv后尺寸

@@ -91,6 +91,7 @@ DATA_NAME_TO_MAX_NEW_TOKENS = {
 # Sample counts and turn numbers are determined dynamically when loading the dataset
 
 def parse_args(args=None):
+    
     parser = argparse.ArgumentParser()
     compressor_choices = ["h2o", "original", "no_drop_lb", "pq_search","sparq_f"]
     parser.add_argument('--model', type=str, default="llama-3.1", choices=[
@@ -152,8 +153,8 @@ def load_model_and_tokenizer(args, model2path, model_name, device, pp_size):
     # Get model path from model2path mapping
     model_name_or_path = model2path[model_name]
     logger.info(f"Loading model from {model_name_or_path}")
-    
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+    
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     
@@ -262,24 +263,47 @@ MULTITURN_FOLLOW_UP_TEMPLATES = {
     "scbench_prefix_suffix": "{pre_ans}\n\n{input}",
 }
 
+
+
 def create_multiturn_prompt(eg: Dict[str, Any], data_name: str, disable_golden_context: bool = False) -> Dict[str, Any]:
     """
     Create multi-turn prompt for SCBench evaluation (adapted from official eval_utils.py)
     """
     template = MULTITURN_TEMPLATES.get(data_name)
     follow_up_template = MULTITURN_FOLLOW_UP_TEMPLATES.get(data_name)
+    # print("="*100)
+    # print("进入create_multiturn_prompt")
+    # print(f"template: {template}") # {context}\n\n{input}
+    # print(f"follow_up_template: {follow_up_template}") # {pre_ans}\n\n{input}
+    
     
     if not template or not follow_up_template:
         raise ValueError(f"Unsupported task: {data_name}")
     
     context = eg.get("context", "")
     multi_turns = eg.get("multi_turns", [])
+    # print(f"context: {context}")
+    # print(f"multi_turns: {multi_turns}")
     
+# {
+#   "context": "长上下文背景信息",    // 固定不变的背景
+#   "multi_turns": [              // 多轮对话数组
+#     { "input": "第1轮问题", "answer": "第1轮答案" },
+#     { "input": "第2轮问题", "answer": "第2轮答案" },
+#     { "input": "第3轮问题", "answer": "第3轮答案" },
+#     { "input": "第4轮问题", "answer": "第4轮答案" },
+#     { "input": "第5轮问题", "answer": "第5轮答案" }
+#   ]
+# }
+
     if not multi_turns:
         raise ValueError(f"No multi_turns found in sample {eg.get('id', 'unknown')}")
     
+    
     if data_name == "scbench_choice_eng":
+        
         first_turn = multi_turns[0]
+        
         options = first_turn.get("options", [])
         
         first_turn_prompt = template.format(
@@ -377,6 +401,9 @@ def create_multiturn_prompt(eg: Dict[str, Any], data_name: str, disable_golden_c
             context=context,
             input=first_turn["input"],
         )
+        # print(f"first_turn_prompt: {first_turn_prompt}") #context\n\n{input}
+        
+        # print("disable_golden_context: {disable_golden_context}")
         
         follow_up_prompts = []
         for i in range(1, len(multi_turns)):
@@ -385,15 +412,22 @@ def create_multiturn_prompt(eg: Dict[str, Any], data_name: str, disable_golden_c
             else:
                 pre_ans = multi_turns[i - 1]["answer"]
             
+            
+            # follow_up_prompt = 上一轮的答案 + 下一轮的输入(问题)
             follow_up_prompt = follow_up_template.format(
                 pre_ans=pre_ans if pre_ans is not None else "",
                 input=multi_turns[i]["input"],
             )
+            # print(f"follow_up_prompt: {follow_up_prompt}")
             follow_up_prompts.append(follow_up_prompt)
+        
+        
+        ground_truth = [turn["answer"] for turn in multi_turns]
+        # print(f"ground_truth: {ground_truth}")  ['D', 'C', 'C', 'F', 'D']
         
         return {
             "prompts": [first_turn_prompt] + follow_up_prompts,
-            "ground_truth": [turn["answer"] for turn in multi_turns],
+            "ground_truth": ground_truth,
         }
 
 
@@ -401,7 +435,7 @@ def create_multiturn_prompt(eg: Dict[str, Any], data_name: str, disable_golden_c
 def generate_response(model, tokenizer, prompt: str, max_new_tokens: int, device_id: int) -> tuple:
     """Generate response using PQCache model"""
     try:
-        # Tokenize input
+        # Tokenize input 把人话翻译成token id
         inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=100000)
         # 当使用CUDA_VISIBLE_DEVICES时，使用cuda:0
         if os.environ.get("CUDA_VISIBLE_DEVICES"):
@@ -412,7 +446,7 @@ def generate_response(model, tokenizer, prompt: str, max_new_tokens: int, device
             attention_mask = inputs["attention_mask"].to(f"cuda:{device_id}")
         
         input_length = input_ids.shape[1]
-        
+        # print(f"input_length: {input_length}")
         start_time = time.time()
         
         with torch.no_grad():
@@ -425,14 +459,16 @@ def generate_response(model, tokenizer, prompt: str, max_new_tokens: int, device
                 pad_token_id=tokenizer.eos_token_id,
                 use_cache=True
             )
-        
+        # print(f"outputs.shape: {outputs.shape}") # outputs.shape = [batch_size, sequence_length] torch.Size([1, 291])
+
         generation_time = time.time() - start_time
         
         # Decode output
-        generated_tokens = outputs[0][input_length:]
+        generated_tokens = outputs[0][input_length:] # : 表示从该位置开始到结尾的所有token
+        # print(f"generated_tokens: {generated_tokens}")
         response = tokenizer.decode(generated_tokens, skip_special_tokens=True)
         output_length = len(generated_tokens)
-        
+        print("generated_tokens长度: ", output_length)
         return response, generation_time, input_length, output_length
         
     except Exception as e:
@@ -452,6 +488,7 @@ def evaluate_single_task(args, task_name: str):
     # Load model using same method as vq_pred_scbench_official.py
     model2path = json.load(open("config/model2path.json", "r"))
     device = torch.device(f"cuda:{args.device_id}")
+    # tokenizer 包含了所有token ID和词的对应关系
     model, tokenizer = load_model_and_tokenizer(args, model2path, args.model, device, getattr(args, 'pp_size', 1))
     
     # Load dataset from local JSONL files
@@ -477,10 +514,13 @@ def evaluate_single_task(args, task_name: str):
         }
         
         dataset_path = None
+        
         if task_name in local_dataset_files:
             dataset_path = local_dataset_files[task_name]
+            
         elif task_name in json_files:
             dataset_path = json_files[task_name]
+            
         else:
             logger.error(f"Unknown task: {task_name}")
             return
@@ -495,6 +535,7 @@ def evaluate_single_task(args, task_name: str):
                     line = line.strip()
                     if line:
                         dataset.append(json.loads(line))
+                        
         elif dataset_path.endswith('.json'):
             with open(dataset_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -505,19 +546,41 @@ def evaluate_single_task(args, task_name: str):
                     dataset = data['data']
                 else:
                     dataset = [data]
-        
+        # print("dataset的形状: ", len(dataset))
+        # print(f"dataset: {dataset}")
         logger.info(f"Loaded {len(dataset)} samples for {task_name}")
         
+#dataset = [
+#     {样本1的数据},
+#     {样本2的数据}, 
+#     {样本3的数据},
+#     ...
+# ]
+
+# sample = {
+#     "context": "长上下文背景信息...",
+#     "multi_turns": [
+#         {"input": "第1轮问题", "answer": "第1轮答案"},
+#         {"input": "第2轮问题", "answer": "第2轮答案"},
+#         {"input": "第3轮问题", "answer": "第3轮答案"}
+#     ]
+# }
         # Log actual dataset characteristics
         if len(dataset) > 0:
             sample = dataset[0]
-            logger.info(f"Sample keys: {list(sample.keys())}")
-            if 'multi_turns' in sample:
+            logger.info(f"Sample keys: {list(sample.keys())}") #Sample keys: ['context', 'multi_turns', 'id', 'task']
+            # print(f"Sample keys: {list(sample.keys())}")
+            
+            if 'multi_turns' in sample: # 5轮，每轮包含input和answer
                 logger.info(f"Actual turns per sample: {len(sample.get('multi_turns', []))}")
+                # print(f"Actual turns per sample: {len(sample.get('multi_turns', []))}")
+                
             if 'context' in sample:
                 context_len = len(sample.get('context', ''))
                 logger.info(f"Context length (chars): {context_len:,}")
-            
+                # print(f"Context length (chars): {context_len:,}")
+                # print(f"multi_turns: {sample.get('multi_turns', [])}")
+                
     except Exception as e:
         logger.error(f"Failed to load dataset {task_name}: {e}")
         import traceback
@@ -526,14 +589,19 @@ def evaluate_single_task(args, task_name: str):
     
     # Limit number of examples based on dataset size and user request
     total_samples = len(dataset)
+    # print(f"total_samples: {total_samples}")
     if args.num_eval_examples > 0:
         num_to_eval = min(args.num_eval_examples, total_samples)
+        # print(f"num_to_eval: {num_to_eval}")
     else:
         num_to_eval = total_samples
-    
+        # print(f"num_to_eval: {num_to_eval}")
+        
+        
     # Use list slicing instead of dataset.select (which doesn't exist for regular lists)
     dataset = dataset[:num_to_eval]
     logger.info(f"Will evaluate {num_to_eval} out of {total_samples} samples")
+    # print(f"Will evaluate {num_to_eval} out of {total_samples} samples") # 作用：控制评估的样本数量
     
     # Get max_new_tokens for this task
     max_new_tokens = DATA_NAME_TO_MAX_NEW_TOKENS.get(task_name, 100)
@@ -542,17 +610,21 @@ def evaluate_single_task(args, task_name: str):
     if isinstance(max_new_tokens, dict):
         # For mixed tasks like summary_with_needles, use first task's setting for simplicity
         max_new_tokens = list(max_new_tokens.values())[0]
-    
+        
+    # print(f"Using max_new_tokens: {max_new_tokens} (decode phase generation limit)")
     logger.info(f"Using max_new_tokens: {max_new_tokens} (decode phase generation limit)")
     
     # Prepare output directory
-    output_dir = Path(args.output_dir) / "llama-3.1" / task_name / "pqcache_official"
+    output_dir = Path(args.output_dir) / task_name
     output_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Output directory: {output_dir}")
     
     output_file = output_dir / f"compress_{args.compress_ratio}_important_{args.important_ratio}_recent_{args.recent_ratio}_subvec_{args.n_subvec_per_head}_subbits_{args.n_subbits}.jsonl"
-    
+    print(f"Output file: {output_file}")
     # Create incremental save file path
     incremental_file = output_dir / f"incremental_compress_{args.compress_ratio}_important_{args.important_ratio}_recent_{args.recent_ratio}_subvec_{args.n_subvec_per_head}_subbits_{args.n_subbits}.jsonl"
+    print(f"Incremental file: {incremental_file}")
+    
     
     # Clear incremental file if it exists
     if incremental_file.exists():
@@ -586,9 +658,18 @@ def evaluate_single_task(args, task_name: str):
             sample_results = []
             for turn_idx, (prompt, ground_truth) in enumerate(zip(prompts, ground_truths)):
                 # Generate response
+                # print("="*100)
+                
+                print(f"进入第{turn_idx+1}轮的prompt\n: {prompt}")
+                # print(f"ground_truth: {ground_truth}")
                 response, gen_time, input_len, output_len = generate_response(
                     model, tokenizer, prompt, max_new_tokens, args.device_id
-                )
+                ) 
+                # response: 模型生成的回答, gen_time: 生成时间, input_len: 输入长度, output_len: 输出长度
+                
+                print(f"response: {response}")
+                print(f"input_len: {input_len}")
+                print(f"output_len: {output_len}")
                 
                 # Prepare result record
                 result = {
@@ -607,6 +688,7 @@ def evaluate_single_task(args, task_name: str):
                     result["repo"] = sample.get("repo", "")
                     if turn_idx < len(sample["multi_turns"]):
                         result["func_name"] = sample["multi_turns"][turn_idx].get("name", "")
+                
                 elif task_name == "scbench_repoqa_and_kv":
                     result["lang"] = sample.get("lang", "")
                     result["repo"] = sample.get("repo", "")
@@ -657,7 +739,6 @@ def evaluate_single_task(args, task_name: str):
             
             with open(incremental_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(error_result, ensure_ascii=False) + '\n')
-            
             continue
     
     # Save final results (保持与原始格式兼容)
@@ -668,6 +749,7 @@ def evaluate_single_task(args, task_name: str):
     # Log statistics
     num_turns = len(results)
     num_unique_samples = len(set([r["id"] for r in results]))
+    
     if num_turns > 0:
         avg_time = total_time / num_turns
         avg_input_length = total_input_length / num_turns
@@ -718,12 +800,15 @@ def main():
     if args.task_category:
         tasks_to_run = TASK_CATEGORIES[args.task_category]
         logger.info(f"Running task category '{args.task_category}': {tasks_to_run}")
+        
     elif args.task == "all":
         tasks_to_run = ALL_TASKS
         logger.info(f"Running all tasks: {tasks_to_run}")
+        
     elif args.task in TASK_CATEGORIES:
         tasks_to_run = TASK_CATEGORIES[args.task]
         logger.info(f"Running task category '{args.task}': {tasks_to_run}")
+        
     else:
         tasks_to_run = [args.task]
         logger.info(f"Running single task: {args.task}")
@@ -751,6 +836,7 @@ def main():
     logger.info(f"\n{'='*50}")
     logger.info("SCBench Generic evaluation completed!")
     logger.info(f"Evaluated {len(all_results)} tasks")
+    
     for task_name, results in all_results.items():
         logger.info(f"  {task_name}: {len(results) if results else 0} samples")
     logger.info(f"{'='*50}")

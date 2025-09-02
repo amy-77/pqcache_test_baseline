@@ -13,15 +13,15 @@ echo "当前conda环境: $CONDA_DEFAULT_ENV"
 which python
 
 # 轻量级测试配置
-TASK="scbench_repoqa"
+TASK="scbench_many_shot"
 MODEL_NAME_OR_PATH="meta-llama/Llama-3.1-8B-Instruct"
-OUTPUT_DIR="results_scbench"
+OUTPUT_DIR="pred/test"
 
 # 🔥 关键：大幅减少参数进行快速测试
-MAX_SEQ_LENGTH=10000    # 从100000减少到8192 (约10倍减少)
-MAX_NEW_TOKENS=50      # 从1024减少到50 (约20倍减少)
+MAX_SEQ_LENGTH=32768   # many_shot需要较长序列长度，设置为32K
+MAX_NEW_TOKENS=10      # many_shot任务的官方配置
 NUM_EVAL_EXAMPLES=1    # 只测试1个样本
-MAX_TURNS=1            # 只测试1轮对话
+MAX_TURNS=3            # 只测试1轮对话
 
 # PQCache参数（保持不变）
 COMPRESS_RATIO=0.1
@@ -58,9 +58,10 @@ start_time=$(date +%s)
 # 运行轻量级测试
 PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128" \
 TOKENIZERS_PARALLELISM=false \
-python vq_pred_scbench_official.py \
+python vq_pred_scbench_generic.py \
     --task ${TASK} \
     --model llama-3.1 \
+    --output_dir ${OUTPUT_DIR} \
     --max_seq_length ${MAX_SEQ_LENGTH} \
     --max_new_tokens ${MAX_NEW_TOKENS} \
     --num_eval_examples ${NUM_EVAL_EXAMPLES} \
@@ -86,7 +87,7 @@ echo "✅ SCBench轻量级测试完成！"
 echo "⏱️ 耗时: ${duration} 秒"
 
 # 检查增量保存文件
-INCREMENTAL_FILE="pred/llama-3.1/${TASK}/scbench_official/incremental_compress_${COMPRESS_RATIO}_important_${IMPORTANT_RATIO}_recent_${RECENT_RATIO}_subvec_${N_SUBVEC_PER_HEAD}_subbits_${N_SUBBITS}.jsonl"
+INCREMENTAL_FILE="${OUTPUT_DIR}/llama-3.1/${TASK}/pqcache_general/incremental_compress_${COMPRESS_RATIO}_important_${IMPORTANT_RATIO}_recent_${RECENT_RATIO}_subvec_${N_SUBVEC_PER_HEAD}_subbits_${N_SUBBITS}.jsonl"
 
 echo ""
 echo "📁 检查增量保存结果:"
@@ -112,3 +113,8 @@ if [ -f "${INCREMENTAL_FILE}" ]; then
     echo "🚀 增量保存功能验证成功！可以使用完整配置运行："
     echo "   nohup ./run_scbench_repoqa_incremental.sh > scbench_full.log 2>&1 &"
 fi
+
+
+
+
+#./run_scbench_test_mini.sh > debug_test.log 2>&1
